@@ -38,12 +38,12 @@ int2 baudTable[18] = { {50     ,B50},
 };
 
 // return speed code for baud rate, or -1 if baud rate not in baudTable
-int decodeBaud(int rate){
+int decodeBaud(int rate) {
 	int NBAUD = sizeof(baudTable)/sizeof(baudTable[0]);
 	int i = 0;
 
-	for(i=0; i<NBAUD; i++){
-		if (baudTable[i].x == rate){
+	for(i=0; i<NBAUD; i++) {
+		if (baudTable[i].x == rate) {
 			return baudTable[i].y;
 		}
 	}
