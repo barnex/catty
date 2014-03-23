@@ -108,10 +108,10 @@ int main(int argc, char** argv) {
 	char buf[BUFSIZE+1];
 	for (;;) {
 		int n = read(fd, &buf[0], BUFSIZE);
-		buf[n] = 0; // terminate string
+		buf[n] = 0;          // terminate string
 		if (n > 0) {
 			printf("%s", &buf[0]);
-			fflush(stdout);
+			fflush(stdout);  // need to flush stdout in case no newline is present in data
 		} 
 		else {
 			// nothing read: wait a bit for data to flow in
