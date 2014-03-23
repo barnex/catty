@@ -17,7 +17,8 @@ typedef struct {
 } int2;
 
 // maps human-readable baud rate on speed code
-int2 baudTable[18] = { {50     ,B50},
+int2 baudTable[18] = { 
+	{50     ,B50},
 	{75     ,B75},
 	{110    ,B110},
 	{134    ,B134},
@@ -53,29 +54,26 @@ int decodeBaud(int rate) {
 int main(int argc, char** argv) {
 
 	char* prog = argv[0];
-
 	if(argc != 3) {
 		fprintf(stderr, "%s: expecting 2 arguments: ttydevice, baudrate\n", prog);
 		exit(1);
 	}
 
 	// parse baud rate
-	int baudCode = atoi(argv[2]);
+	int baudCode = atoi(argv[2]);                                      // ok if argv not a number: atoi->0, decodeBaud->-1
 	int baudRate = decodeBaud(baudCode);
 	if(baudRate <= 0) {
-		fprintf(stderr, "%s: invalid baud rate: %s\n", prog, argv[2]);
+		fprintf(stderr, "%s: invalid baud rate: %s\n", prog, argv[2]); // print argv so use sees if it's not a number
 		exit(1);
 	}
-	decodeBaud(baudCode);
 
-	// parse file argument
+	// open tty
 	char* file = argv[1];
 	int fd = open(file, O_RDWR | O_NOCTTY | O_SYNC);
 	if(fd == -1) {
 		fprintf(stderr, "%s: cannot open: %s: %s\n", prog, file, strerror(errno));
 		exit(1);
 	}
-
 	if(!isatty(fd)) {
 		fprintf(stderr, "%s: not a tty: %s\n", prog, file);
 		exit(1);
@@ -90,12 +88,10 @@ int main(int argc, char** argv) {
 	cfmakeraw(&config);
 	config.c_cflag &= ~(CSIZE | PARENB);
 	config.c_cflag |= CS8;
+	config.c_cc[VMIN]  = 1; // buffer as little as possible
+	config.c_cc[VTIME] = 1; // return as quickly as possible
 
-	// buffer as little as possible
-	config.c_cc[VMIN]  = 1;
-	config.c_cc[VTIME] = 1;
-
-	// Communication speed
+	// communication speed
 	if(cfsetispeed(&config, baudRate) < 0 || cfsetospeed(&config, baudRate) < 0) {
 		fprintf(stderr, "%s: setspeed %d: %s\n", prog, baudRate, strerror(errno));
 		exit(1);
@@ -106,6 +102,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+	// read and pipe to stdout
 #define BUFSIZE 2048
 
 	char buf[BUFSIZE+1];
@@ -115,8 +112,11 @@ int main(int argc, char** argv) {
 		if (n > 0) {
 			printf("%s", &buf[0]);
 			fflush(stdout);
-		} else {
-			usleep(1000);
+		} 
+		else {
+			// nothing read: wait a bit for data to flow in
+			// (probably not needed with O_SYNC, but safe in case we change to O_NODELAY)
+			usleep(1000); 
 		}
 	}
 	return 0;
